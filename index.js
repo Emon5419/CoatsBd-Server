@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
@@ -19,6 +20,18 @@ async function run() {
    try {
       await client.connect();
       const productCollection = client.db('coatsBD').collection('product');
+      const itemsCollection = client.db('coatsBD').collection('items');
+
+      // Auth
+      app.post('/login', async (req, res) => {
+         const user = req.body;
+         const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+            expiresIn: '1d'
+         });
+         res.send(accessToken);
+      });
+
+
 
       app.get('/product', async (req, res) => {
          const query = {};
@@ -47,9 +60,21 @@ async function run() {
          res.send(result);
       })
 
-      app.get('/hero', (req, res) => {
-         res.send('Hero Running');
+      // My Items API
+      app.post('/items', async (req, res) => {
+         const items = req.body;
+         const result = await itemsCollection.insertOne(items);
+         res.send(result);
       })
+      app.get('/items', async (req, res) => {
+         const email = req.query.email;
+         console.log(email)
+         const query = { email: email };
+         const cursor = itemsCollection.find(query);
+         const items = await cursor.toArray();
+         res.send(items);
+      });
+
 
    }
    finally {
